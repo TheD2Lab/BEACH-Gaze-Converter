@@ -7,23 +7,28 @@ import numpy as np
 from natsort import natsorted
 
 # --- Config ---
+# input folder
 FOLDER_PATH = Path("./raw_WG_data") # change if needed
 
 #CSV path with all of the starting point eps values
 EPS_CSV_PATH = Path("eps_values.csv") #change if needed
 
-def output_summary(path, current, epsS, epsT, min_sample, score, cluster_count):
+SCREEN_W, SCREEN_H = 1920.0, 1080.0
+
+def output_summary(path, current, epsS, epsT, min_sample, score, cluster_count, noise_count, length):
     with open(path, "a") as file:
         file.write(f"Participant: {current}\n")
         file.write(f"Best min_samples: {min_sample}\n")
         file.write(f"Best eps1 (spatial, pixels): {epsS:.6f}\n")
         file.write(f"Best eps2 (temporal, seconds): {epsT:.6f}\n")
         file.write(f"Score: {score:.6f}\n")
-        file.write(f"Cluster Size: {cluster_count}\n")
+        file.write(f"Cluster Count: {cluster_count}\n")
+        file.write(f"Rows: {length}\n")
+        file.write(f"Noise Count: {noise_count}\n")
         file.write("-------------------------------------------------------------------------\n")
 
-def output_summary_csv(df, p, epsS, epsT, min_sample, score, cluster_count):
-    df.loc[len(df)] = [p, epsS, epsT, min_sample, score, cluster_count]
+def output_summary_csv(df, p, epsS, epsT, min_sample, score, cluster_count, noise_count, length):
+    df.loc[len(df)] = [p, epsS, epsT, min_sample, score, cluster_count, length, noise_count]
 
 def get_columns(df):
     cols_lower = {c.lower(): c for c in df.columns}
@@ -82,8 +87,6 @@ def fitness_score(X_space, X_time, labels):
     return compactness - penalty
 
 def process(filePath, epsS_options, epsT_options, min_samples):
-    SCREEN_W, SCREEN_H = 1920.0, 1080.0
-
     # 1) Load CSV
     df = pd.read_csv(filePath)
 
@@ -102,6 +105,7 @@ def process(filePath, epsS_options, epsT_options, min_samples):
     best_score = -1
     best_params = None
     cluster_count = -1
+    noise_count = -1
 
     # (Grid Search) try every combination from the eps options and min samples
     for epsS, epsT, min_sample in product(epsS_options, epsT_options, min_samples):
@@ -112,6 +116,7 @@ def process(filePath, epsS_options, epsT_options, min_samples):
         # count the amount of clusters; subtract by 1 if the -1 cluster exist
         # because it does not count as a cluster. those points are noise if -1
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+        n_noise = np.sum(labels == -1)
 
         # if all noise or just one cluster just skip
         if n_clusters <= 1:
@@ -126,14 +131,15 @@ def process(filePath, epsS_options, epsT_options, min_samples):
             best_score = score
             best_params = (epsS, epsT, min_sample)
             cluster_count = n_clusters
+            noise_count = n_noise
 
-    return best_params, best_score, cluster_count
+    return best_params, best_score, cluster_count, noise_count, len(df)
 
 def main():
     folderPath = FOLDER_PATH
     files = [f for f in folderPath.iterdir() if f.is_file()]
 
-    results = pd.DataFrame(columns=['ID', 'Best_EPS_Spatial', 'Best_EPS_Temporal', 'Best_MIN_SAMPLES', 'Score', 'Cluster_Size'])
+    results = pd.DataFrame(columns=['ID', 'Best_EPS_Spatial', 'Best_EPS_Temporal', 'Best_MIN_SAMPLES', 'Score', 'Cluster_Size', 'Rows', 'Noise_Count'])
 
     for file in natsorted(files):
         df = pd.read_csv(EPS_CSV_PATH)
@@ -149,11 +155,11 @@ def main():
         epsT_grid = np.linspace(0.7*initial_epsT, 1.3*initial_epsT, 10)
         min_sample_grid = [3, 4, 5, 6, 7, 8]
 
-        best_params, score, cluster_count = process(file, epsS_grid, epsT_grid, min_sample_grid)
+        best_params, score, cluster_count, noise_count, length = process(file, epsS_grid, epsT_grid, min_sample_grid)
 
-        output_summary("best_params.txt", file.stem, best_params[0], best_params[1], best_params[2], score, cluster_count)
+        output_summary("best_params.txt", file.stem, best_params[0], best_params[1], best_params[2], score, cluster_count, noise_count, length)
         
-        output_summary_csv(results, p, best_params[0], best_params[1], best_params[2], score, cluster_count)
+        output_summary_csv(results, p, best_params[0], best_params[1], best_params[2], score, cluster_count, noise_count, length)
     
     results.to_csv("best_param_values.csv", mode='w', index=False)
 

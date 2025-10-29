@@ -19,7 +19,9 @@ FOLDER_PATH = Path("./raw_WG_data") # change if needed
 # 2) 2 * the features in your dataset (which is being used here)
 # 3) standard 4-5 found in papers
 # in the end it depends on your dataset
-MIN_SAMPLES = 6 
+MIN_SAMPLES = 6
+
+SCREEN_W, SCREEN_H = 1920.0, 1080.0
 
 def get_columns(df):
     cols_lower = {c.lower(): c for c in df.columns}
@@ -55,8 +57,6 @@ def output_summary_csv(df, p, epsS, epsT, min_sample):
     df.loc[len(df)] = [p, epsS, epsT, min_sample]
 
 def process(filePath):
-    SCREEN_W, SCREEN_H = 1920.0, 1080.0
-
     # 1) Load CSV
     df = pd.read_csv(filePath)
 

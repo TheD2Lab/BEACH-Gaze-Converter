@@ -73,7 +73,7 @@ overwritten. **SO BE CAREFUL**.
 
 ## stdbscan_tuning.py
 This script uses the starting points found in the previous script and performs a grid search to find the best parameters
-to cluster your data.
+to cluster your data. Examples of the outputs can be found in the best_params folder of this repo.
 
 - Inputs: csv file with the starting points and folder path for WebGazer data
 - Outputs: csv and txt file with the information of the best parameters, noise count, row count of input csv, and cluster count

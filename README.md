@@ -16,7 +16,7 @@ our scripts. In your environment please install:
 All of the above can be installed with pip install 'library name listed above'. If you are having trouble
 installing the packages, please search up how to install it online.
 
-<u>**SPECIAL CASE**<u>: After the installation, st-dbscan must be modified in order for the scripts to work. Currently,
+<u>**SPECIAL CASE**</u>: After the installation, st-dbscan must be modified in order for the scripts to work. Currently,
 the init.py has a library that will be deprecated soon. We can simply remove that portion so that the code will
 work. That snippet only keeps the st-dbscan updated if any checks are called. Below is what you should remove from
 the init.py that can be found in the .venv/lib/site-packages/st_dbscan/init.py
@@ -64,7 +64,7 @@ The script searches for a good starting point for both eps values. The min_sampl
 values to change for your specific screen size. You may also use a different min_sample starting point if you'd like.
 - The files will always be ouputted with the same name, but if you'd like to change their name look at the run_all() 
 function
-- <u>**Please keep in mind**<u>: if you already have files of the same name as the outputted files, the files will be appended to or overwritten. **SO BE CAREFUL**.
+- <u>**Please keep in mind**</u>: if you already have files of the same name as the outputted files, the files will be appended to or overwritten. **SO BE CAREFUL**.
 - The script ouputs three options.
     1. looks at a single csv file and outputs in terminal with graphs
     2. looks at a folder with multiple files and outputs txt and csv file to show results
@@ -80,4 +80,4 @@ to cluster your data. Examples of the outputs can be found in the best_params fo
 ### Components and things to keep in mind when running this script
 - At the top of the code, there is a config area. This place is made to edit your folder and csv input paths. There is also
 values to change for your specific screen size.
-- <u>**Please keep in mind**<u>: if you already have files of the same name as the outputted files, the files will be appended to or overwritten. **SO BE CAREFUL**.
+- <u>**Please keep in mind**</u>: if you already have files of the same name as the outputted files, the files will be appended to or overwritten. **SO BE CAREFUL**.

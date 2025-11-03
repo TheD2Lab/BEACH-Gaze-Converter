@@ -39,6 +39,10 @@ from sklearn.preprocessing import StandardScaler
 # delete everything above line 13 in the __init__ file for this library.
 from st_dbscan import ST_DBSCAN
 
+PARAMS_CSV = "best_param_values.csv"
+_params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
+PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
+
 # Function to normalize a value given a min and max. (unchanged, not used bc its wrong)
 def normalize(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
@@ -117,8 +121,7 @@ def add_saccade_features(data):
 # Function to add placeholder fields. (unchanged)
 def add_placeholder_fields(data):
     placeholders = {
-        'MEDIA_ID': '', 'MEDIA_NAME': '', 'CNT': np.arange(0, len(data)),
-        'FPOGV': 1, 'BPOGX': 0.0, 'BPOGY': 0.0, 'BPOGV': 0,
+        'MEDIA_ID': '', 'MEDIA_NAME': '', 'CNT': np.arange(0, len(data)), 'BPOGX': 0.0, 'BPOGY': 0.0, 'BPOGV': 0,
         'CX': 0, 'CY': 0, 'CS': '', 'KB': 0, 'KBS': 0, 'USER': '',
         'LPCX': 0.0, 'LPCY': 0.0, 'LPD': 0, 'LPS': 0, 'LPV': 0,
         'RPCX': 0.0, 'RPCY': 0.0, 'RPD': 0, 'RPS': 0, 'RPV': 0,
@@ -135,7 +138,8 @@ def add_placeholder_fields(data):
 
 # Process gaze data with AOI detection and DBSCAN-based fixation analysis.
 def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
-                      output_file='processed_gaze_data.csv', fixation_file='fixations.csv'):
+                      output_file='processed_gaze_data.csv', fixation_file='fixations.csv',
+                      epsSpat=0.03, epsT=0.8, min_samples=5):
     #added screen width and height
     SCREEN_W, SCREEN_H = 1920.0, 1080.0
 
@@ -170,7 +174,7 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     # it a heuristic that is followed in the ST_DBSCAN paper.
     # another heuristic amount of features * 2 = 6 # int(np.log(len(data)))
 
-    epsSpat, epsT, min_samples = 0.03, 0.8, 5
+    # epsSpat, epsT, min_samples = 0.03, 0.8, 5
 
     Time = data['TIME_NUM'].astype(float).to_numpy()
     x = data['FPOGX'].astype(float).to_numpy()
@@ -181,7 +185,7 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     # the order that must enter the fit function must be ['t', 'x', 'y']
     st_db = ST_DBSCAN(eps1=epsSpat, eps2=epsT, min_samples=min_samples).fit(X_feat)
     data['st_db_label'] = st_db.labels
-    print("Unique ST-DBSCAN labels:", np.unique(data['st_db_label']))
+    # print("Unique ST-DBSCAN labels:", np.unique(data['st_db_label']))
 
     # --- STEP 5: INITIAL FIXATION ID ASSIGNMENT  ---
     labels = data['st_db_label'].to_numpy()  # ints; -1 = noise
@@ -235,8 +239,8 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     data['FPOGID'] = mapped.astype(int)
 
     # Optional: quick stats
-    print("Final FPOGIDs:", data['FPOGID'].nunique(),
-          " assigned rows %:", 100 * (data['FPOGID'] > 0).mean())
+    # print("Final FPOGIDs:", data['FPOGID'].nunique(),
+    #       " assigned rows %:", 100 * (data['FPOGID'] > 0).mean())
 
     # # --- STEP 5b: Renumber FPOGIDs sequentially starting at 1 (FIXED) ---
     # unique_ids = [int(x) for x in pd.unique(data['FPOGID']) if x > 0]
@@ -244,27 +248,70 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     # new_fix_ids = {old: new for new, old in enumerate(unique_ids, start=1)}
     # data['FPOGID'] = data['FPOGID'].map(new_fix_ids).fillna(1).astype(int)
 
-    # --- STEP 5c: Seeded FPOGS and row-wise FPOGD (FIXED) ---
+    # --- Make fixations contiguous and squash tiny "islands" ---
+    data.sort_values('TIME_NUM', kind='mergesort', inplace=True, ignore_index=True)
+
+    rid = (data['FPOGID'] != data['FPOGID'].shift()).cumsum()
+    grp = data.groupby(rid)
+    runs = pd.DataFrame({
+        'gid': grp['FPOGID'].first(),
+        'n': grp.size(),
+        't0': grp['TIME_NUM'].min(),
+        't1': grp['TIME_NUM'].max()
+    })
+    runs['dur'] = runs['t1'] - runs['t0']
+    runs['gid_prev'] = runs['gid'].shift()
+    runs['gid_next'] = runs['gid'].shift(-1)
+    runs['dur_prev'] = runs['dur'].shift()
+    runs['dur_next'] = runs['dur'].shift(-1)
+
+    MIN_ROWS, MIN_DUR = 2, 0.050  # tweak if you like
+    speck = (runs['n'] < MIN_ROWS) | (runs['dur'] < MIN_DUR)
+
+    target = pd.Series(index=runs.index, dtype='Int64')
+    is_aba = speck & (runs['gid_prev'] == runs['gid_next']) & runs['gid_prev'].notna()
+    target[is_aba] = runs.loc[is_aba, 'gid_prev'].astype('Int64')
+    left = speck & ~is_aba
+    pick_prev = runs['dur_prev'].fillna(-1) >= runs['dur_next'].fillna(-1)
+    target[left & pick_prev] = runs.loc[left & pick_prev, 'gid_prev'].astype('Int64')
+    target[left & ~pick_prev] = runs.loc[left & ~pick_prev, 'gid_next'].astype('Int64')
+
+    if target.notna().any():
+        m = pd.Series(rid, index=data.index)  # map each row to its run id
+        repl = target.dropna().astype(int)
+        data.loc[m.isin(repl.index), 'FPOGID'] = m.map(repl).fillna(data['FPOGID']).astype(int)
+
+    # final: force strictly contiguous IDs (no revisits)
+    data['FPOGID'] = (data['FPOGID'] != data['FPOGID'].shift()).cumsum().astype(int)
+
+    # --- STEP 5c: No Seeded FPOGS and row-wise FPOGD (FIXED) ---
     fix_group = data.groupby('FPOGID')['TIME_NUM']
-    true_start = fix_group.min()
-    true_end   = fix_group.max()
+    true_start = fix_group.min()  # first sample time per fixation
 
-    med_dt_per_fix = data.groupby('FPOGID')['TIME_NUM'].apply(
-        lambda s: np.median(np.diff(s.values)) if len(s) > 1 and np.any(np.diff(s.values) > 0) else np.nan
-    )
-    global_dt = float(np.median(np.diff(data['TIME_NUM'].values))) if len(data) > 1 else 0.033
-    med_dt_per_fix = med_dt_per_fix.fillna(max(1e-3, global_dt))
-
-    seeded_start = (true_start - med_dt_per_fix).clip(lower=0)
-    data['FPOGS'] = data['FPOGID'].map(seeded_start).astype(float)
+    # Write per-row FPOGS and recompute FPOGD
+    data['FPOGS'] = data['FPOGID'].map(true_start).astype(float)
     data['FPOGD'] = (data['TIME_NUM'] - data['FPOGS']).clip(lower=0.0)
+    # keep very first row exactly 0 for neatness
     if len(data) > 0:
-        data.loc[0, 'FPOGD'] = 0.0  # keep very first row exactly 0
+        data.loc[data.index[0], 'FPOGD'] = 0.0
 
-    # Validity based on TRUE (unseeded) duration
-    # total_dur = (true_end - true_start).astype(float)
-    # valid_map = (total_dur >= 0.100).astype(int)
-    # data['FPOGV'] = data['FPOGID'].map(valid_map).fillna(0).astype(int)
+    # If the gaze point is -1 (noise) then FPOGV == 0, else 1
+    data.loc[data['st_db_label'] == -1, 'FPOGV'] = 0
+    data.loc[data['st_db_label'] != -1, 'FPOGV'] = 1
+
+    # If the fixation is at least 100ms, then valid for all points EXCEPT noise.
+    fix_durations = data.groupby('FPOGID')['FPOGD'].max()  # duration per fixation
+    valid_map = (fix_durations >= 0.1).astype(int)  # 1 if ≥100ms else 0
+
+    data.loc[data['st_db_label'] != -1, 'FPOGV'] = (
+        data.loc[data['st_db_label'] != -1, 'FPOGID'].map(valid_map).fillna(0).astype(int)
+    )
+    data['FPOGV'] = data['FPOGV'].astype(int)
+
+    # hmmmm
+    durations = data.groupby('FPOGID')['FPOGD'].max()
+    print("Minimum fixation duration:", durations.min())
+    print()
 
     # --- STEP 6: AOI assignment ---
     AOI_Q, AOI_V = None, None
@@ -331,10 +378,9 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
             data[c] = 0 if c not in ('MEDIA_ID', 'MEDIA_NAME', 'CS', 'USER', 'AOI') else ''
     data = data[columns_order]
     data.to_csv(output_file, index=False)
-    print(f"Processed gaze data with AOIs saved to {output_file}")
+    # print(f"Processed gaze data with AOIs saved to {output_file}")
 
 if __name__ == "__main__":
-    # Use glob to search for all files matching "p*_webcam_gaze_data.csv"
     raw_files = glob.glob("p*_webcam_gaze_data.csv")
     if not raw_files:
         print("No raw gaze data files matching 'p*_webcam_gaze_data.csv' were found.")
@@ -342,12 +388,24 @@ if __name__ == "__main__":
         aoi_config_file = 'aoi_config.json'
         for gaze_file in raw_files:
             base_name = os.path.basename(gaze_file)
-            parts = base_name.split("_")
-            if len(parts) < 2:
-                print(f"Filename {base_name} does not match expected pattern. Skipping.")
-                continue
-            participant_id = parts[0]  # e.g., "p7"
+            participant_id = base_name.split("_")[0]  # e.g., "p7"
+
+            # pull per-participant params (fallback to simple defaults if missing)
+            p = PARAMS.get(participant_id, {"Best_EPS_Spatial": 0, "Best_EPS_Temporal": 0, "Best_MIN_SAMPLES": 0})
+            epsSpat, epsT, min_samples = float(p["Best_EPS_Spatial"]), float(p["Best_EPS_Temporal"]), int(p["Best_MIN_SAMPLES"])
+
+            # sanity check
+            print(f"{participant_id}: epsSpat={epsSpat:.6f}, epsT={epsT:.6f}, min_samples={min_samples}")
+
             output_file = f"{participant_id}_all_gaze.csv"
-            fixation_file = f"{participant_id}_fixations.csv"  # if needed
-            print(f"Processing {gaze_file} -> {output_file}")
-            process_gaze_data(gaze_file, aoi_config_file, output_file, fixation_file)
+            fixation_file = f"{participant_id}_fixations.csv"
+
+            process_gaze_data(
+                gaze_file,
+                aoi_config_file=aoi_config_file,
+                output_file=output_file,
+                fixation_file=fixation_file,
+                epsSpat=epsSpat,
+                epsT=epsT,
+                min_samples=min_samples
+            )

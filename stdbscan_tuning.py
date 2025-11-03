@@ -139,7 +139,7 @@ def main():
     folderPath = FOLDER_PATH
     files = [f for f in folderPath.iterdir() if f.is_file()]
 
-    results = pd.DataFrame(columns=['ID', 'Best_EPS_Spatial', 'Best_EPS_Temporal', 'Best_MIN_SAMPLES', 'Score', 'Cluster_Size', 'Rows', 'Noise_Count'])
+    results = pd.DataFrame(columns=['ID', 'Best_EPS_Spatial', 'Best_EPS_Temporal', 'Best_MIN_SAMPLES', 'Score', 'Cluster_Count', 'Rows', 'Noise_Count'])
 
     for file in natsorted(files):
         df = pd.read_csv(EPS_CSV_PATH)

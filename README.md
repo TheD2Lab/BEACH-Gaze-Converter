@@ -74,7 +74,11 @@ function
 This script uses the starting points found in the previous script and performs a grid search to find the best parameters
 to cluster your data. Examples of the outputs can be found in the best_params folder of this repo.
 
-Scoring for the clusters is calculated as C - Penalty where:
+Scoring for the clusters is calculated as 
+
+score = C - Penalty 
+
+where:
 - C = 1 / 1 + D
 - Penalty = noise ratio + cluster count penalty
 - D = avg spatial distance for a cluster + avg temporal distance for a cluster

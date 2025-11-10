@@ -69,6 +69,9 @@ def compactness_score(X_space, X_time, labels):
 
     # spatio-temporal density ratio normalized to be our score
     # range [0-1] higher the better its more compact
+    # D = avg spatial distance + avg temporal distance
+    # 1 + D in the denominator will normalize the range to be between [0-1]
+    # smaller the denominator tighter the cluster and higher score
     d = spatial_mean + temporal_mean
     compactness = 1.0 / (1 + d)
 
@@ -82,6 +85,9 @@ def fitness_score(X_space, X_time, labels):
     compactness = compactness_score(X_space, X_time, labels)
 
     # penalize noise and too few clusters
+    # noise ratio = n_noise / n_points
+    # cluster count penalty = 1 / n_clusters + 1
+    # add these and it will create the penalty value
     penalty = (n_noise / n_points) + (1.0 / (n_clusters + 1))
 
     return compactness - penalty
@@ -151,17 +157,17 @@ def main():
         initial_epsT = row['EPS_Temporal'].values[0]
 
         # create the grid space to get ready for the grid search
-        epsS_grid = np.linspace(0.7*initial_epsS, 1.3*initial_epsS, 10)
-        epsT_grid = np.linspace(0.7*initial_epsT, 1.3*initial_epsT, 10)
-        min_sample_grid = [3, 4, 5, 6, 7, 8]
+        epsS_grid = np.linspace(1*initial_epsS, 3*initial_epsS, 10)
+        epsT_grid = np.linspace(0.01*initial_epsT, 1.5*initial_epsT, 10)
+        min_sample_grid = [3]
 
         best_params, score, cluster_count, noise_count, length = process(file, epsS_grid, epsT_grid, min_sample_grid)
 
-        output_summary("best_params.txt", file.stem, best_params[0], best_params[1], best_params[2], score, cluster_count, noise_count, length)
+        output_summary("best_params_mod.txt", file.stem, best_params[0], best_params[1], best_params[2], score, cluster_count, noise_count, length)
         
         output_summary_csv(results, p, best_params[0], best_params[1], best_params[2], score, cluster_count, noise_count, length)
     
-    results.to_csv("best_param_values.csv", mode='w', index=False)
+    results.to_csv("best_param_values_mod.csv", mode='w', index=False)
 
 if __name__ == "__main__":
     main()

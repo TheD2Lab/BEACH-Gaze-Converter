@@ -74,8 +74,22 @@ function
 This script uses the starting points found in the previous script and performs a grid search to find the best parameters
 to cluster your data. Examples of the outputs can be found in the best_params folder of this repo.
 
+Scoring for the clusters is calculated as C - Penalty where:
+- C = 1 / 1 + D
+- Penalty = noise ratio + cluster count penalty
+- D = avg spatial distance for a cluster + avg temporal distance for a cluster
+- noise ratio = num_noise / num_total_points
+- cluster count penalty = 1 / num_clusters + 1
+
+We penalize for low cluster count and high noise ratio.
+
 - Inputs: csv file with the starting points and folder path for WebGazer data
 - Outputs: csv and txt file with the information of the best parameters, noise count, row count of input csv, and cluster count
+
+**CURRENT ISSUE**: The find_elbow.py does not give a very good starting point apparently. That script may be fixed or removed.
+As for now the trend is that a higher spatial eps and lower temporal eps creates better clusters and has less problems when running
+through the converter and BeachGaze. Further research is needed. We've edited the tuning code to search for 3 times higher than the starting
+spatial point and as low of a temporal point you can go.
 
 ### Components and things to keep in mind when running this script
 - At the top of the code, there is a config area. This place is made to edit your folder and csv input paths. There is also

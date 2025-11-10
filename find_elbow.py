@@ -11,7 +11,7 @@ from kneed import KneeLocator
 from natsort import natsorted
 
 # --- Config ---
-CSV_PATH = Path("p1_webcam_gaze_data.csv") # change if needed
+CSV_PATH = Path("./raw_WG_data/p30_webcam_gaze_data.csv") # change if needed
 FOLDER_PATH = Path("./raw_WG_data") # change if needed
 
 # many different ways to decide on min_sample

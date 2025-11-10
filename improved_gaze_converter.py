@@ -24,6 +24,8 @@ Updated:
 - FPOGS = seeded start (one median-Δt earlier per fixation, clamped ≥ 0)
 - FPOGD = row-wise (TIME_NUM − FPOGS) in seconds; first sample forced = 0
 - AOI assignment
+- Reads from best_params_values_mod to find fixations
+- bridges noise using time and space, not just space
 """
 
 import os
@@ -31,19 +33,14 @@ import glob
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler
-
-# dependency from eren-ck in order to get rid of the warning line in the terminal
-# delete everything above line 13 in the __init__ file for this library.
 from st_dbscan import ST_DBSCAN
 
-PARAMS_CSV = "best_param_values.csv"
+# Use best eps values found
+PARAMS_CSV = "best_param_values_mod.csv"
 _params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
 PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
 
-# Function to normalize a value given a min and max. (unchanged, not used bc its wrong)
+# Function to normalize a value given a min and max.
 def normalize(value, min_value, max_value):
     return (value - min_value) / (max_value - min_value)
 
@@ -62,12 +59,6 @@ def calculate_saccade_magnitude(x1, y1, x2, y2):
 # Function to calculate saccade direction. (unchanged)
 def calculate_saccade_direction(x1, y1, x2, y2):
     return np.degrees(np.arctan2(y2 - y1, x2 - x1))
-
-
-# Function to calculate fixation validity. (checked elsewhere so not used)
-# def calculate_fixation_validity(data):
-    # data['FIXATION_VALIDITY'] = data.apply(lambda row: 1 if row['FPOGD'] >= 100 else 0, axis=1)
-    # return data
 
 # (Optional) Function to calculate AOI metrics (unchanged).
 def calculate_aoi_metrics(data, aoi_config):
@@ -136,6 +127,62 @@ def add_placeholder_fields(data):
             data[column] = default
     return data
 
+def bridge_and_monotonicize(data, epsSpat, epsT, require_within=None):
+    # Bridge -1's
+    mask_fix = data["FPOGID"] != -1
+    if mask_fix.any():
+        grp = data[mask_fix].groupby("FPOGID")
+        fix_ids = grp.size().index.to_numpy()
+        cx = grp["FPOGX"].mean().to_numpy()
+        cy = grp["FPOGY"].mean().to_numpy()
+        ts = grp["TIME_NUM"].min().to_numpy()
+        te = grp["TIME_NUM"].max().to_numpy()
+
+        noise_idx = data.index[data["FPOGID"] == -1].to_numpy()
+        # handle degenerate eps just in case
+        eS = epsSpat if epsSpat > 0 else 1e-9
+        eT = epsT    if epsT    > 0 else 1e-9
+
+
+        for i in noise_idx:
+            t = float(data.at[i, "TIME_NUM"])
+            x = float(data.at[i, "FPOGX"])
+            y = float(data.at[i, "FPOGY"])
+
+            # For rows with FPOGID == -1, assign to the nearest fixation using a normalized ST distance:
+            # D = sqrt( (ds/epsSpat)^2 + (dt/epsT)^2 )
+            # where ds = distance to fixation centroid in normalized screen coords (FPOGX,FPOGY),
+            #       dt = time distance to fixation [start,end] span (0 if inside span).
+
+            # time distance to span
+            inside = (t >= ts) & (t <= te)
+            dt = np.where(inside, 0.0, np.minimum(np.abs(t - ts), np.abs(t - te)))
+            # spatial distance to centroid
+            ds = np.hypot(x - cx, y - cy)
+            # normalized joint distance
+            D = np.sqrt((ds / eS) ** 2 + (dt / eT) ** 2)
+
+            j = int(np.argmin(D))
+            if (require_within is None) or (D[j] <= require_within):
+                data.at[i, "FPOGID"] = int(fix_ids[j])
+
+    # Relabels and makes sure no ID revisiting happens
+    labs = data["FPOGID"].to_numpy()
+    new_ids = np.full(labs.shape, -1, dtype=int)
+    curr_id = 0
+    prev_lab = None
+    for idx, lab in enumerate(labs):
+        if lab == -1:
+            prev_lab = None  # noise breaks the run
+            continue
+        if prev_lab != lab:
+            curr_id += 1     # new contiguous segment
+        new_ids[idx] = curr_id
+        prev_lab = lab
+
+    data["FPOGID"] = new_ids
+    return data
+
 # Process gaze data with AOI detection and DBSCAN-based fixation analysis.
 def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
                       output_file='processed_gaze_data.csv', fixation_file='fixations.csv',
@@ -170,119 +217,22 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     data['FPOGY'] = data['y'] / SCREEN_H
 
     # --- STEP 4: Fixation detection via spatio-temporal DBSCAN (FIXED) ---
-    # for now let the min_samples be ln(X) where X is the length of the dataframe
-    # it a heuristic that is followed in the ST_DBSCAN paper.
-    # another heuristic amount of features * 2 = 6 # int(np.log(len(data)))
-
-    # epsSpat, epsT, min_samples = 0.03, 0.8, 5
-
     Time = data['TIME_NUM'].astype(float).to_numpy()
     x = data['FPOGX'].astype(float).to_numpy()
     y = data['FPOGY'].astype(float).to_numpy()
-
+    spatial_norm = data[['FPOGX', 'FPOGY']].astype(float).to_numpy()
     X_feat = np.column_stack([Time, x, y])
 
     # the order that must enter the fit function must be ['t', 'x', 'y']
     st_db = ST_DBSCAN(eps1=epsSpat, eps2=epsT, min_samples=min_samples).fit(X_feat)
     data['st_db_label'] = st_db.labels
-    # print("Unique ST-DBSCAN labels:", np.unique(data['st_db_label']))
+    labels = data['st_db_label'].to_numpy()
 
-    # --- STEP 5: INITIAL FIXATION ID ASSIGNMENT  ---
-    labels = data['st_db_label'].to_numpy()  # ints; -1 = noise
-    N = len(labels)
-    idx = np.arange(N)
-    is_labeled = labels != -1
+    # Assign gaze points to their label under FPOGID
+    data['FPOGID'] = labels.astype(int)
 
-    # Nearest labeled indices to the LEFT and RIGHT (by row/time order)
-    left_idx = np.where(is_labeled, idx, np.nan)
-    left_idx = pd.Series(left_idx).ffill().to_numpy()  # last labeled index at/before i (or NaN)
-    right_idx = np.where(is_labeled, idx, np.nan)
-    right_idx = pd.Series(right_idx).bfill().to_numpy()  # first labeled index at/after i (or NaN)
-
-    # Time gaps to those neighbors (∞ if neighbor doesn't exist) <- what?
-    left_gap = np.full(N, np.inf)
-    right_gap = np.full(N, np.inf)
-
-    mL = ~np.isnan(left_idx) # True where a left neighbor exists, False otherwise.
-    mR = ~np.isnan(right_idx) # True where a right neighbor exists, False otherwise.
-
-    if mL.any():
-        left_gap[mL] = Time[mL] - Time[left_idx[mL].astype(int)]
-    if mR.any():
-        right_gap[mR] = Time[right_idx[mR].astype(int)] - Time[mR]
-
-    use_left = left_gap <= right_gap
-
-    # Start from original labels; replace only noise rows by nearest labeled neighbor in time
-    bridged = labels.astype(float)
-    noise = ~is_labeled
-
-    src_idx = np.full(N, np.nan)  # where to copy label from
-    # choose left if it's closer and exists
-    src_idx[noise & use_left & mL] = left_idx[noise & use_left & mL]
-    # otherwise choose right if it exists
-    src_idx[noise & ~use_left & mR] = right_idx[noise & ~use_left & mR]
-
-    assignable = ~np.isnan(src_idx)
-    bridged[assignable] = labels[src_idx[assignable].astype(int)]
-
-    # Renumber by first occurrence time → 1..K (chronological)
-    b = pd.Series(bridged, name='label')  # float but integer-like values per cluster
-    first_idx = b.reset_index().groupby('label')['index'].min().sort_values()
-    remap = {old: new for new, old in enumerate(first_idx.index, start=1)}
-    mapped = b.map(remap)
-
-    # Safety: ensure no zeros; if any NaNs remain (edge cases), use nearest-time fallback then clamp to 1
-    if mapped.isna().any():
-        mapped = mapped.ffill().bfill().fillna(1)
-
-    data['FPOGID'] = mapped.astype(int)
-
-    # Optional: quick stats
-    # print("Final FPOGIDs:", data['FPOGID'].nunique(),
-    #       " assigned rows %:", 100 * (data['FPOGID'] > 0).mean())
-
-    # # --- STEP 5b: Renumber FPOGIDs sequentially starting at 1 (FIXED) ---
-    # unique_ids = [int(x) for x in pd.unique(data['FPOGID']) if x > 0]
-    # unique_ids.sort()
-    # new_fix_ids = {old: new for new, old in enumerate(unique_ids, start=1)}
-    # data['FPOGID'] = data['FPOGID'].map(new_fix_ids).fillna(1).astype(int)
-
-    # --- Make fixations contiguous and squash tiny "islands" ---
-    data.sort_values('TIME_NUM', kind='mergesort', inplace=True, ignore_index=True)
-
-    rid = (data['FPOGID'] != data['FPOGID'].shift()).cumsum()
-    grp = data.groupby(rid)
-    runs = pd.DataFrame({
-        'gid': grp['FPOGID'].first(),
-        'n': grp.size(),
-        't0': grp['TIME_NUM'].min(),
-        't1': grp['TIME_NUM'].max()
-    })
-    runs['dur'] = runs['t1'] - runs['t0']
-    runs['gid_prev'] = runs['gid'].shift()
-    runs['gid_next'] = runs['gid'].shift(-1)
-    runs['dur_prev'] = runs['dur'].shift()
-    runs['dur_next'] = runs['dur'].shift(-1)
-
-    MIN_ROWS, MIN_DUR = 2, 0.050  # tweak if you like
-    speck = (runs['n'] < MIN_ROWS) | (runs['dur'] < MIN_DUR)
-
-    target = pd.Series(index=runs.index, dtype='Int64')
-    is_aba = speck & (runs['gid_prev'] == runs['gid_next']) & runs['gid_prev'].notna()
-    target[is_aba] = runs.loc[is_aba, 'gid_prev'].astype('Int64')
-    left = speck & ~is_aba
-    pick_prev = runs['dur_prev'].fillna(-1) >= runs['dur_next'].fillna(-1)
-    target[left & pick_prev] = runs.loc[left & pick_prev, 'gid_prev'].astype('Int64')
-    target[left & ~pick_prev] = runs.loc[left & ~pick_prev, 'gid_next'].astype('Int64')
-
-    if target.notna().any():
-        m = pd.Series(rid, index=data.index)  # map each row to its run id
-        repl = target.dropna().astype(int)
-        data.loc[m.isin(repl.index), 'FPOGID'] = m.map(repl).fillna(data['FPOGID']).astype(int)
-
-    # final: force strictly contiguous IDs (no revisits)
-    data['FPOGID'] = (data['FPOGID'] != data['FPOGID'].shift()).cumsum().astype(int)
+    # bridge noise
+    data = bridge_and_monotonicize(data, epsSpat=epsSpat, epsT=epsT, require_within=None)
 
     # --- STEP 5c: No Seeded FPOGS and row-wise FPOGD (FIXED) ---
     fix_group = data.groupby('FPOGID')['TIME_NUM']
@@ -308,10 +258,6 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     )
     data['FPOGV'] = data['FPOGV'].astype(int)
 
-    # hmmmm
-    durations = data.groupby('FPOGID')['FPOGD'].max()
-    print("Minimum fixation duration:", durations.min())
-    print()
 
     # --- STEP 6: AOI assignment ---
     AOI_Q, AOI_V = None, None
@@ -360,6 +306,7 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     # --- STEP 10: Prepare final output (same ordering as Code 1) ---
     new_time_header = f"TIME({base_time_str})"
     data = data.rename(columns={"TIME_REL": new_time_header})
+
     # Drop intermediate columns.
     data = data.drop(columns=["db_label"], errors='ignore')
     columns_order = [
@@ -378,7 +325,8 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
             data[c] = 0 if c not in ('MEDIA_ID', 'MEDIA_NAME', 'CS', 'USER', 'AOI') else ''
     data = data[columns_order]
     data.to_csv(output_file, index=False)
-    # print(f"Processed gaze data with AOIs saved to {output_file}")
+
+
 
 if __name__ == "__main__":
     raw_files = glob.glob("p*_webcam_gaze_data.csv")
@@ -390,12 +338,9 @@ if __name__ == "__main__":
             base_name = os.path.basename(gaze_file)
             participant_id = base_name.split("_")[0]  # e.g., "p7"
 
-            # pull per-participant params (fallback to simple defaults if missing)
+            # pull per-participant params
             p = PARAMS.get(participant_id, {"Best_EPS_Spatial": 0, "Best_EPS_Temporal": 0, "Best_MIN_SAMPLES": 0})
             epsSpat, epsT, min_samples = float(p["Best_EPS_Spatial"]), float(p["Best_EPS_Temporal"]), int(p["Best_MIN_SAMPLES"])
-
-            # sanity check
-            print(f"{participant_id}: epsSpat={epsSpat:.6f}, epsT={epsT:.6f}, min_samples={min_samples}")
 
             output_file = f"{participant_id}_all_gaze.csv"
             fixation_file = f"{participant_id}_fixations.csv"

@@ -1,5 +1,5 @@
-# Processing-WebGazer-Data
-Python Scripts to help process webgazer data to be BeachGaze ready by converting it into GazePoint format.
+# BEACH-Gaze Converter
+The Beach-Gaze Converter toolkit is desinged to convert raw gaze (x, y, and timestamps), such as those generated using [WebGazer](https://webgazer.cs.brown.edu), into a data format that is compatible with [Beach-Gaze](https://github.com/TheD2Lab/BEACH-Gaze).
 
 ## Setting up the environment
 Depending on what ide you use, the environment setup may be different. We used many libraies to implement 

@@ -37,13 +37,25 @@ finally:
 
 Once you've installed and modified the libraries, you are set to go.
 
+Please use the files in this order to produce the right inputs for the gaze converter:
+find_elbow > stdbscan_tuning > improved_gaze_converter.
+
 ## improved_gaze_converter.py
 A script that helps convert WebGazer data into a format acceptable for BeachGaze. The format is identical to the output
 of GazePoint's data. Currently we use a clustering algorithm called ST-DBSCAN to help identify fixations. From there,
 we can calculate any other field that is needed to match the format of GazePoint's data. The script:
 
-- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK)
+- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK) and a csv file that contains the parameters used for ST-DBSCAN
 - Outputs: csv file that follows GazePoint format
+
+```python
+# found at line 39 to chose the path for the parameter csv
+# examples of the csv format found in the best_params folder
+# Use best eps values found
+PARAMS_CSV = "best_param_values_mod.csv"
+_params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
+PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
+```
 
 ## find_elbow.py
 ST-DBSCAN requires parameters in order to output good clusters. These parameters are eps Spatial, eps Temporal, and min_samples.
@@ -70,6 +82,23 @@ function
     2. looks at a folder with multiple files and outputs txt and csv file to show results
     3. exit
 
+### Areas that need direct manipulation
+This is at the beginning of the file:
+```python
+# --- Config ---
+CSV_PATH = Path("./raw_WG_data/p30_webcam_gaze_data.csv") # change if needed
+FOLDER_PATH = Path("./raw_WG_data") # change if needed
+
+# many different ways to decide on min_sample
+# 1) ln(x) where x is the size of the data set
+# 2) 2 * the features in your dataset (which is being used here)
+# 3) standard 4-5 found in papers
+# in the end it depends on your dataset
+MIN_SAMPLES = 6
+
+SCREEN_W, SCREEN_H = 1920.0, 1080.0
+```
+
 ## stdbscan_tuning.py
 This script uses the starting points found in the previous script and performs a grid search to find the best parameters
 to cluster your data. Examples of the outputs can be found in the best_params folder of this repo.
@@ -94,6 +123,28 @@ We penalize for low cluster count and high noise ratio.
 - At the top of the code, there is a config area. This place is made to edit your folder and csv input paths. There is also
 values to change for your specific screen size.
 - <u>**Please keep in mind**</u>: if you already have files of the same name as the outputted files, the files will be appended to or overwritten. **SO BE CAREFUL**.
+
+### Areas that need direct manipulation
+This is at the beginning of the file:
+```python
+# --- Config ---
+# input folder
+FOLDER_PATH = Path("./raw_WG_data") # change if needed
+
+#CSV path with all of the starting point eps values
+EPS_CSV_PATH = Path("eps_values.csv") #change if needed
+
+SCREEN_W, SCREEN_H = 1920.0, 1080.0
+```
+These can be found at lines 159 - 163 in the main function. These are the settings to change the ranges of the grid search. You can choose to go a certain percentage
+plus or minus the intial eps parameters for each item. The min_sample_grid is an array that contains integer values of what min_samples to test out. Feel free to edit
+the values.
+```python
+# create the grid space to get ready for the grid search
+epsS_grid = np.linspace(1*initial_epsS, 3*initial_epsS, 10)
+epsT_grid = np.linspace(0.01*initial_epsT, 1.5*initial_epsT, 10)
+min_sample_grid = [3]
+```
 
 ## CURRENT ISSUE 
 The find_elbow.py does not give a very good starting point apparently. That script may be fixed or removed.

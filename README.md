@@ -38,7 +38,9 @@ finally:
 Once you've installed and modified the libraries, you are set to go.
 
 Please use the files in this order to produce the right inputs for the gaze converter:
-find_elbow > stdbscan_tuning > improved_gaze_converter.
+find_elbow > stdbscan_tuning > improved_gaze_converter. You can use the gaze converter
+directly, but make sure a csv containing parameters for ST-DBSCAN is provided. Reference the
+best_params folder for the csv format that is needed.
 
 ## improved_gaze_converter.py
 A script that helps convert WebGazer data into a format acceptable for BeachGaze. The format is identical to the output

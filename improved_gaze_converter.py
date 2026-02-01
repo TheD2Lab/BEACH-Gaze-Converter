@@ -329,11 +329,15 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
 
 
 if __name__ == "__main__":
-    raw_files = glob.glob("p*_webcam_gaze_data.csv")
+    raw_files = glob.glob("webcam_data/p*_webcam_gaze_data.csv") # webcam data located inside a "webcam_data" folder
     if not raw_files:
         print("No raw gaze data files matching 'p*_webcam_gaze_data.csv' were found.")
     else:
         aoi_config_file = 'aoi_config.json'
+
+        output_dir = "WG_all_gaze"
+        os.makedirs(output_dir, exist_ok=True) # create output folder if missing
+
         for gaze_file in raw_files:
             base_name = os.path.basename(gaze_file)
             participant_id = base_name.split("_")[0]  # e.g., "p7"
@@ -342,7 +346,7 @@ if __name__ == "__main__":
             p = PARAMS.get(participant_id, {"Best_EPS_Spatial": 0, "Best_EPS_Temporal": 0, "Best_MIN_SAMPLES": 0})
             epsSpat, epsT, min_samples = float(p["Best_EPS_Spatial"]), float(p["Best_EPS_Temporal"]), int(p["Best_MIN_SAMPLES"])
 
-            output_file = f"{participant_id}_all_gaze.csv"
+            output_file = os.path.join(output_dir, f"{participant_id}_all_gaze.csv")
             fixation_file = f"{participant_id}_fixations.csv"
 
             process_gaze_data(
@@ -354,3 +358,7 @@ if __name__ == "__main__":
                 epsT=epsT,
                 min_samples=min_samples
             )
+
+            print(f"{participant_id}_all_gaze.csv outputted into WG_all_gaze")
+
+

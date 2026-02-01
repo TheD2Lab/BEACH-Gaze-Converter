@@ -47,16 +47,21 @@ A script that helps convert WebGazer data into a format acceptable for BeachGaze
 of GazePoint's data. Currently we use a clustering algorithm called ST-DBSCAN to help identify fixations. From there,
 we can calculate any other field that is needed to match the format of GazePoint's data. The script:
 
-- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK) and a csv file that contains the parameters used for ST-DBSCAN
-- Outputs: csv file that follows GazePoint format
+- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK) and a csv file that contains the parameters used for ST-DBSCAN.
+          Optional: To determine if gaze points are in a specific AOI, provide aoi_config.json.
+- Outputs: csv file that follows GazePoint format inside created WG_all_gaze folder.
 
 ```python
-# found at line 39 to chose the path for the parameter csv
+# best parameters found at line 39 to chose the path for the parameter csv
 # examples of the csv format found in the best_params folder
 # Use best eps values found
-PARAMS_CSV = "best_param_values_mod.csv"
+PARAMS_CSV = "best_params/best_param_values_mod.csv"
 _params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
 PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
+
+# WebGazer data found at line 332 to chose the path 
+# examples of the csv format found in webcam_data 
+raw_files = glob.glob("webcam_data/p*_webcam_gaze_data.csv")
 ```
 
 ## find_elbow.py

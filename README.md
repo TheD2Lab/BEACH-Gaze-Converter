@@ -60,7 +60,7 @@ _params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
 PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
 
 # WebGazer data found at line 332 to chose the path 
-# examples of the csv format found in webcam_data 
+# examples of the csv format found in webcam_data folder
 raw_files = glob.glob("webcam_data/p*_webcam_gaze_data.csv")
 ```
 

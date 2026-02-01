@@ -36,7 +36,7 @@ import json
 from st_dbscan import ST_DBSCAN
 
 # Use best eps values found
-PARAMS_CSV = "best_param_values_mod.csv"
+PARAMS_CSV = "best_params/best_param_values_mod.csv"
 _params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
 PARAMS = _params_df.set_index("ID")[["Best_EPS_Spatial", "Best_EPS_Temporal", "Best_MIN_SAMPLES"]].to_dict("index")
 

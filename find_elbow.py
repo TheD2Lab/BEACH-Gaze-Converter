@@ -63,7 +63,7 @@ def process(filePath):
     # 2) Detect columns
     x_col, y_col, time_col = get_columns(df)
 
-    # 3) normalize spatial and temporal
+    # 3) normalize spatial
     df[x_col] = df[x_col] / SCREEN_W
     df[y_col] = df[y_col] / SCREEN_H
     spatial_norm = df[[x_col, y_col]].to_numpy()

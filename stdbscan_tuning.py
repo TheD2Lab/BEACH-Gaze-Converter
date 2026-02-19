@@ -7,12 +7,22 @@ import numpy as np
 from natsort import natsorted
 
 # --- Config ---
+# Change to appropriate directory
+# FOLDER_PATH is the location of all gaze data file
+# EPS_CSV_PATH is the file generated from find_elbow.py
 # input folder
 FOLDER_PATH = Path("./raw_WG_data") # change if needed
 
 #CSV path with all of the starting point eps values
 EPS_CSV_PATH = Path("eps_values.csv") #change if needed
 
+# Change to appropriate screen resolution
+    # For reference to an iPad Pro 11", the native resolution is 2420x1668
+    # However, due to the scaling used in SwiftUI, the effective resolution is 1210x834
+    # For your appropriate tablet device, the effective resolution can be found using the following code
+    # in Xcode:
+    # print(UIScreen.main.bounds.size)
+    # print(UIScreen.main.scale)
 SCREEN_W, SCREEN_H = 1920.0, 1080.0
 
 def output_summary(path, current, epsS, epsT, min_sample, score, cluster_count, noise_count, length):
@@ -33,6 +43,7 @@ def output_summary_csv(df, p, epsS, epsT, min_sample, score, cluster_count, nois
 def get_columns(df):
     cols_lower = {c.lower(): c for c in df.columns}
 
+    # Ensure that your headers match, otherwise change the values here
     # Spatial columns (X, Y)
     x_col = cols_lower.get("x")
     y_col = cols_lower.get("y")
@@ -156,10 +167,11 @@ def main():
         initial_epsS = row['EPS_Spatial'].values[0]
         initial_epsT = row['EPS_Temporal'].values[0]
 
+        # It is recommended to adjust these values for your study in order to find the ideal gridspace range
         # create the grid space to get ready for the grid search
         epsS_grid = np.linspace(1*initial_epsS, 3*initial_epsS, 10)
         epsT_grid = np.linspace(0.01*initial_epsT, 1.5*initial_epsT, 10)
-        min_sample_grid = [3]
+        min_sample_grid = [3] # Can test values from 3-8
 
         best_params, score, cluster_count, noise_count, length = process(file, epsS_grid, epsT_grid, min_sample_grid)
 

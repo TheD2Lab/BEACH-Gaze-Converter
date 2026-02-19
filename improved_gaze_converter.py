@@ -188,9 +188,17 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
                       output_file='processed_gaze_data.csv', fixation_file='fixations.csv',
                       epsSpat=0.03, epsT=0.8, min_samples=5):
     #added screen width and height
+    # Change to appropriate screen resolution
+        # For reference to an iPad Pro 11", the native resolution is 2420x1668
+        # However, due to the scaling used in SwiftUI, the effective resolution is 1210x834
+        # For your appropriate tablet device, the effective resolution can be found using the following code
+        # in Xcode:
+        # print(UIScreen.main.bounds.size)
+        # print(UIScreen.main.scale)
     SCREEN_W, SCREEN_H = 1920.0, 1080.0
 
     # --- STEP 1: Read header to extract base time ---
+    # Ensure that your headers match, otherwise change the values here
     raw_columns = pd.read_csv(gaze_file, nrows=0).columns
     time_header_candidates = [col for col in raw_columns if col.startswith("TIME(")]
     if not time_header_candidates:
@@ -211,6 +219,7 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
     data = data.sort_values(by='TIME_NUM', kind='mergesort').reset_index(drop=True)
 
     # --- STEP 3: Normalize X and Y coordinates to monitor (FIXED) ---
+    # Ensure that your headers match, otherwise change the values here
     if 'x' not in data.columns or 'y' not in data.columns:
         raise ValueError("Input must contain 'x' and 'y' columns.")
     data['FPOGX'] = data['x'] / SCREEN_W
@@ -329,12 +338,15 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
 
 
 if __name__ == "__main__":
+    # Change to appropriate directory
     raw_files = glob.glob("webcam_data/p*_webcam_gaze_data.csv") # webcam data located inside a "webcam_data" folder
+    
     if not raw_files:
         print("No raw gaze data files matching 'p*_webcam_gaze_data.csv' were found.")
     else:
         aoi_config_file = 'aoi_config.json'
 
+        # If output directory needs to change, change here
         output_dir = "WG_all_gaze"
         os.makedirs(output_dir, exist_ok=True) # create output folder if missing
 
@@ -346,6 +358,7 @@ if __name__ == "__main__":
             p = PARAMS.get(participant_id, {"Best_EPS_Spatial": 0, "Best_EPS_Temporal": 0, "Best_MIN_SAMPLES": 0})
             epsSpat, epsT, min_samples = float(p["Best_EPS_Spatial"]), float(p["Best_EPS_Temporal"]), int(p["Best_MIN_SAMPLES"])
 
+            # If output files require a specific name, change here
             output_file = os.path.join(output_dir, f"{participant_id}_all_gaze.csv")
             fixation_file = f"{participant_id}_fixations.csv"
 

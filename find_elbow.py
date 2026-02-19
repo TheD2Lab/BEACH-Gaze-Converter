@@ -11,6 +11,9 @@ from kneed import KneeLocator
 from natsort import natsorted
 
 # --- Config ---
+# Change to appropriate directory
+# CSV_PATH is the location of an individual gaze data file
+# FOLDER_PATH is the location of all gaze data files
 CSV_PATH = Path("./raw_WG_data/p30_webcam_gaze_data.csv") # change if needed
 FOLDER_PATH = Path("./raw_WG_data") # change if needed
 
@@ -21,11 +24,19 @@ FOLDER_PATH = Path("./raw_WG_data") # change if needed
 # in the end it depends on your dataset
 MIN_SAMPLES = 6
 
+# Change to appropriate screen resolution
+    # For reference to an iPad Pro 11", the native resolution is 2420x1668
+    # However, due to the scaling used in SwiftUI, the effective resolution is 1210x834
+    # For your appropriate tablet device, the effective resolution can be found using the following code
+    # in Xcode:
+    # print(UIScreen.main.bounds.size)
+    # print(UIScreen.main.scale)
 SCREEN_W, SCREEN_H = 1920.0, 1080.0
 
 def get_columns(df):
     cols_lower = {c.lower(): c for c in df.columns}
 
+    # Ensure that your headers match, otherwise change the values here
     # Spatial columns (X, Y)
     x_col = cols_lower.get("x")
     y_col = cols_lower.get("y")

@@ -35,6 +35,7 @@ import numpy as np
 import json
 from st_dbscan import ST_DBSCAN
 
+# Change this to location that stdbcan_tuning generated the file
 # Use best eps values found
 PARAMS_CSV = "best_params/best_param_values_mod.csv"
 _params_df = pd.read_csv(PARAMS_CSV, sep=None, engine="python")
@@ -338,7 +339,7 @@ def process_gaze_data(gaze_file, aoi_config_file='aoi_config.json',
 
 
 if __name__ == "__main__":
-    # Change to appropriate directory
+    # Change to appropriate directory and file naming scheme
     raw_files = glob.glob("webcam_data/p*_webcam_gaze_data.csv") # webcam data located inside a "webcam_data" folder
     
     if not raw_files:

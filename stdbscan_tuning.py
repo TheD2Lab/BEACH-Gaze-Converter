@@ -167,7 +167,9 @@ def main():
         initial_epsS = row['EPS_Spatial'].values[0]
         initial_epsT = row['EPS_Temporal'].values[0]
 
-        # It is recommended to adjust these values for your study in order to find the ideal gridspace range
+        # It is highly recommended to adjust these values for your study in order to find the ideal gridspace range
+        # Start with range of 30% from the initial eps value and adjust from there (i.e. 0.7*initial_eps, 1.3*initial_eps)
+        # and expand the min_sample_grid (i.e. [3, 4, 5, ...])
         # create the grid space to get ready for the grid search
         epsS_grid = np.linspace(1*initial_epsS, 3*initial_epsS, 10)
         epsT_grid = np.linspace(0.01*initial_epsT, 1.5*initial_epsT, 10)

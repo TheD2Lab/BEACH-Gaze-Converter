@@ -1,0 +1,28 @@
+Participant: p1_webcam_gaze_data
+Detected columns -> X: 'x', Y: 'y', Time: 'TIME(2025/03/03 09:10:28.201)'
+Rows used: 6017
+min_samples: 6
+Suggested eps1 (spatial, pixels): 0.054093
+Suggested eps2 (temporal, seconds): 0.798900
+-------------------------------------------------------------------------
+Participant: p3_webcam_gaze_data
+Detected columns -> X: 'x', Y: 'y', Time: 'TIME(2025/03/03 17:10:20.163)'
+Rows used: 7893
+min_samples: 6
+Suggested eps1 (spatial, pixels): 0.038051
+Suggested eps2 (temporal, seconds): 0.732600
+-------------------------------------------------------------------------
+Participant: p4_webcam_gaze_data
+Detected columns -> X: 'x', Y: 'y', Time: 'TIME(2025/03/04 08:39:34.383)'
+Rows used: 6137
+min_samples: 6
+Suggested eps1 (spatial, pixels): 0.051360
+Suggested eps2 (temporal, seconds): 0.627000
+-------------------------------------------------------------------------
+Participant: p5_webcam_gaze_data
+Detected columns -> X: 'x', Y: 'y', Time: 'TIME(2025/03/06 09:47:48.319)'
+Rows used: 4445
+min_samples: 6
+Suggested eps1 (spatial, pixels): 0.044435
+Suggested eps2 (temporal, seconds): 0.751300
+-------------------------------------------------------------------------

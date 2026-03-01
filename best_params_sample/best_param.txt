@@ -1,0 +1,36 @@
+Participant: p1_webcam_gaze_data
+Best min_samples: 3
+Best eps1 (spatial, pixels): 0.078135
+Best eps2 (temporal, seconds): 0.272514
+Score: 0.440134
+Cluster Count: 567
+Rows: 6017
+Noise Count: 812
+-------------------------------------------------------------------------
+Participant: p3_webcam_gaze_data
+Best min_samples: 3
+Best eps1 (spatial, pixels): 0.080330
+Best eps2 (temporal, seconds): 0.249898
+Score: 0.424726
+Cluster Count: 645
+Rows: 7893
+Noise Count: 836
+-------------------------------------------------------------------------
+Participant: p4_webcam_gaze_data
+Best min_samples: 3
+Best eps1 (spatial, pixels): 0.074187
+Best eps2 (temporal, seconds): 0.213877
+Score: 0.454257
+Cluster Count: 526
+Rows: 6137
+Noise Count: 841
+-------------------------------------------------------------------------
+Participant: p5_webcam_gaze_data
+Best min_samples: 3
+Best eps1 (spatial, pixels): 0.083933
+Best eps2 (temporal, seconds): 0.256277
+Score: 0.466292
+Cluster Count: 429
+Rows: 4445
+Noise Count: 462
+-------------------------------------------------------------------------

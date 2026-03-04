@@ -16,10 +16,20 @@ our scripts. In your environment please install:
 All of the above can be installed with pip install 'library name listed above'. If you are having trouble
 installing the packages, please search up how to install it online.
 
+<u>**ST-DBSCAN MANUAL INSTALLATION**</u>: If you encounter issues installing `st-dbscan` via pip (often due to Python version compatibility), you can install it manually by following these steps:
+1. Go to the PyPI page for **st-dbscan**: [st-dbscan on PyPI](https://pypi.org/project/st-dbscan/#files)
+2. Download version **`st_dbscan-0.2.3`**
+3. Open the extracted zip folder and navigate to: *st_dbscan-0.2.3/src/*
+4. Copy the **`st_dbscan`** folder into the root directory of your repository (same level as `stdbscan_tuning.py`)
+5. Do **not** modify the following import statement in the improved_gaze_converter.py:
+```python
+from st_dbscan import ST_DBSCAN
+```
+
 <u>**SPECIAL CASE**</u>: After the installation, st-dbscan must be modified in order for the scripts to work. Currently,
 the init.py has a library that will be deprecated soon. We can simply remove that portion so that the code will
 work. That snippet only keeps the st-dbscan updated if any checks are called. Below is what you should remove from
-the init.py that can be found in the .venv/lib/site-packages/st_dbscan/init.py
+the init.py that can be found in the .venv/lib/site-packages/st_dbscan/init.py (or st_dbscan/init.py if you installed the library manually).
 
 ```python
 from pkg_resources import get_distribution, DistributionNotFound

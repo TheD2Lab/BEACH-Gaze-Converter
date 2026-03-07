@@ -57,9 +57,9 @@ A script that helps convert WebGazer data into a format acceptable for BeachGaze
 of GazePoint's data. Currently we use a clustering algorithm called ST-DBSCAN to help identify fixations. From there,
 we can calculate any other field that is needed to match the format of GazePoint's data. The script:
 
-- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK) and a csv file that contains the parameters used for ST-DBSCAN.
+- Inputs: csv file that follows WebGazer format (x,y,TIME,TIMETICK) and a csv file that contains the parameters used for ST-DBSCAN. [sample csv file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/raw_WG_data_sample)
           Optional: To determine if gaze points are in a specific AOI, provide aoi_config.json.
-- Outputs: csv file that follows GazePoint format inside created WG_all_gaze folder.
+- Outputs: csv file that follows GazePoint format inside created WG_all_gaze folder. [sample csv file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/WG_data_converted_to_GP_sample)
 
 ```python
 # best parameters found at line 39 to chose the path for the parameter csv
@@ -84,9 +84,11 @@ The script searches for a good starting point for both eps values. The min_sampl
 - Inputs: 
     - Option 1: csv file that follows WebGazer format
     - Option 2: folder path with multiple csv files that follow WebGazer format
+    - [sample csv file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/raw_WG_data_sample) associated with both options.
 - Ouputs:
     - Option 1: results ouputted in the terminal and graphs that show the knee/elbow points
     - Option 2: txt and csv file that output details about the the input and the starting eps values for that data (examples can be found in the elbow_knee_values folder of this repo)
+    -[sample csv and text file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/elbow_knee_values_sample) associated with option 2. Option 1 only outputs in the terminal and outputs some graphs.
 
 ### Components and things to keep in mind when running this script
 - At the top of the code, there is a config area. This place is made to edit your file or folder path. There is also
@@ -133,8 +135,8 @@ where:
 
 We penalize for low cluster count and high noise ratio.
 
-- Inputs: csv file with the starting points and folder path for WebGazer data
-- Outputs: csv and txt file with the information of the best parameters, noise count, row count of input csv, and cluster count
+- Inputs: csv file with the starting points and folder path for WebGazer data. [sample csv file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/elbow_knee_values_sample) this comes from the find elbow script. 
+- Outputs: csv and txt file with the information of the best parameters, noise count, row count of input csv, and cluster count. [sample csv and text file](https://github.com/TheD2Lab/BEACH-Gaze-Converter/tree/main/best_params_sample)
 
 ### Components and things to keep in mind when running this script
 - At the top of the code, there is a config area. This place is made to edit your folder and csv input paths. There is also

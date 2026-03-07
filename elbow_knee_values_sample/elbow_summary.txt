@@ -19,10 +19,3 @@ min_samples: 6
 Suggested eps1 (spatial, pixels): 0.051360
 Suggested eps2 (temporal, seconds): 0.627000
 -------------------------------------------------------------------------
-Participant: p5_webcam_gaze_data
-Detected columns -> X: 'x', Y: 'y', Time: 'TIME(2025/03/06 09:47:48.319)'
-Rows used: 4445
-min_samples: 6
-Suggested eps1 (spatial, pixels): 0.044435
-Suggested eps2 (temporal, seconds): 0.751300
--------------------------------------------------------------------------

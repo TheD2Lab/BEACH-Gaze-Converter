@@ -25,12 +25,3 @@ Cluster Count: 526
 Rows: 6137
 Noise Count: 841
 -------------------------------------------------------------------------
-Participant: p5_webcam_gaze_data
-Best min_samples: 3
-Best eps1 (spatial, pixels): 0.083933
-Best eps2 (temporal, seconds): 0.256277
-Score: 0.466292
-Cluster Count: 429
-Rows: 4445
-Noise Count: 462
--------------------------------------------------------------------------
